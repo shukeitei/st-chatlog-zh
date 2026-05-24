@@ -525,31 +525,64 @@ export default function App() {
       `}</style>
 
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
-        {/* 头部 */}
-        <header style={{ textAlign: 'center', marginBottom: 24 }}>
+        {/* 头部（对齐 og-image.png 横幅设计） */}
+        <header style={{ textAlign: 'center', marginBottom: 28 }}>
+          {/* 顶部细线 */}
+          <div style={{ height: 1, background: C.borderStrong, opacity: 0.55, marginBottom: 22 }} />
+          {/* 眉标 */}
           <div
             style={{
               fontFamily: FONT_SERIF,
-              fontSize: 30,
+              fontSize: 12,
+              color: C.warm,
+              letterSpacing: 6,
+              marginBottom: 18,
+            }}
+          >
+            SHUKEITEI · ST · CHATLOG
+          </div>
+          {/* 标题 */}
+          <div
+            style={{
+              fontFamily: FONT_SERIF,
+              fontSize: 32,
               color: C.primary,
               fontWeight: 600,
-              letterSpacing: 2,
-              marginBottom: 8,
+              letterSpacing: 5,
+              marginBottom: 16,
             }}
           >
             把白月光接回家
           </div>
-          <div style={{ color: C.inkMuted, fontSize: 13, lineHeight: 1.6 }}>
-            星野 / 猫箱 聊天记录 → SillyTavern 格式
-          </div>
+          {/* 中间带小圆点的装饰分隔线 */}
           <div
             style={{
-              width: 60,
-              height: 1,
-              background: C.borderStrong,
-              margin: '20px auto 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              width: 150,
+              margin: '0 auto 16px',
             }}
-          />
+          >
+            <div style={{ flex: 1, height: 1, background: C.borderStrong }} />
+            <div
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                border: `1px solid ${C.borderStrong}`,
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ flex: 1, height: 1, background: C.borderStrong }} />
+          </div>
+          {/* 副标题 */}
+          <div style={{ color: C.inkMuted, fontSize: 14, letterSpacing: 1, lineHeight: 1.6 }}>
+            星野 / 猫箱 聊天记录 → SillyTavern
+          </div>
+          {/* 底部细线 */}
+          <div style={{ height: 1, background: C.borderStrong, opacity: 0.55, marginTop: 22 }} />
         </header>
 
         {/* 顶部醒目提示：只做格式转换，不处理图片/视频 */}
