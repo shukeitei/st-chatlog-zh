@@ -95,24 +95,13 @@ function parseTextToMessages(text, userName, charName) {
 }
 
 // ============ 时间格式 ============
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
 function pad(n) {
   return String(n).padStart(2, '0');
 }
 
-function formatSendDate(d) {
-  let hour = d.getHours();
-  const ampm = hour >= 12 ? 'pm' : 'am';
-  hour = hour % 12 || 12;
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} ${hour}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${ampm}`;
-}
-
-function formatCreateDate(d) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}@${pad(d.getHours())}h${pad(d.getMinutes())}m${pad(d.getSeconds())}s`;
+// 仅用于预览区展示起始时间（人类可读），不写进文件
+function formatDisplayDate(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 // 导出文件名用的时间戳：用下载这一刻的时间，避免多个版本互相覆盖
@@ -160,14 +149,13 @@ function downloadFile(filename, content) {
   URL.revokeObjectURL(url);
 }
 
-function buildMetadata(userName, charName, startDate) {
+// 字段顺序对齐新版 ST 导出：chat_metadata 在前，user_name/character_name 在后；
+// 不再写 create_date（新版 Android/Windows 都没有这个字段）
+function buildMetadata(userName, charName) {
   return {
-    user_name: userName,
-    character_name: charName,
-    create_date: formatCreateDate(startDate),
     chat_metadata: {
       integrity: uuid4(),
-      chat_id_hash: chatIdHash(),
+      chat_id_hash: chatIdHash(), // Android 新版没有，但多写无害，对 Windows 老版本兼容更好
       note_prompt: '',
       note_interval: 1,
       note_position: 1,
@@ -178,6 +166,8 @@ function buildMetadata(userName, charName, startDate) {
       tainted: false,
       lastInContextMessageId: 0,
     },
+    user_name: userName,
+    character_name: charName,
   };
 }
 
@@ -190,7 +180,7 @@ function buildMessageObjects(messages, userName, charName, startDate) {
       name: isUser ? userName : charName,
       is_user: isUser,
       is_system: false,
-      send_date: formatSendDate(date),
+      send_date: date.toISOString(),
       mes: msg.content,
       extra: isUser ? { isSmallSys: false, reasoning: '' } : {},
     };
@@ -354,6 +344,16 @@ export default function App() {
       return setHint(`没识别出对话。检查一下文本是不是 "USER: ..." 和 "${c}: ..." 这样的格式开头`);
     }
 
+    // 只识别到单方发言，通常是"TA 叫什么"跟源文本里的名字对不上
+    const userCount = messages.filter((m) => m.speaker === 'user').length;
+    const charCount = messages.filter((m) => m.speaker === 'character').length;
+    if (userCount === 0 || charCount === 0) {
+      setPreview(null);
+      return setHint(
+        `看起来角色名跟源文本对不上——只识别到了 ${userCount === 0 ? '一方' : '另一方'} 的发言。请检查"TA 叫什么"填的是不是跟 Gemini 输出文本里的角色名一字不差，然后重新生成。`,
+      );
+    }
+
     let startDate;
     let source;
     if (customStart) {
@@ -382,7 +382,7 @@ export default function App() {
     const u = userName.trim();
     const c = charName.trim();
     const msgs = testOnly ? preview.messages.slice(0, 3) : preview.messages;
-    const metadata = buildMetadata(u, c, preview.startDate);
+    const metadata = buildMetadata(u, c);
     const objects = buildMessageObjects(msgs, u, c, preview.startDate);
     const jsonl = generateJsonl(metadata, objects);
     const suffix = testOnly ? '_前3条测试' : '';
@@ -409,6 +409,118 @@ export default function App() {
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 底部反馈卡片（搬自 feedback_card_mockup.html） */
+        .feedback-card {
+          margin-top: 24px;
+          background: linear-gradient(180deg, #FBF4E0 0%, #F7ECCE 100%);
+          border: 1px solid #D4C5A9;
+          border-radius: 8px;
+          padding: 22px 20px;
+          position: relative;
+          overflow: hidden;
+        }
+        .feedback-card::before {
+          content: '';
+          position: absolute;
+          top: -8px;
+          left: -8px;
+          right: -8px;
+          height: 4px;
+          background: repeating-linear-gradient(
+            90deg,
+            #C4B59A 0,
+            #C4B59A 6px,
+            transparent 6px,
+            transparent 12px
+          );
+          opacity: 0.4;
+        }
+        .feedback-title {
+          font-family: ${FONT_SERIF};
+          font-size: 19px;
+          color: #3F4A3C;
+          font-weight: 600;
+          letter-spacing: 2px;
+          margin-bottom: 10px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .feedback-icon {
+          display: inline-block;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: #3F4A3C;
+          color: #FBF6EC;
+          font-size: 13px;
+          text-align: center;
+          line-height: 22px;
+          font-family: serif;
+          font-style: italic;
+        }
+        .feedback-text {
+          font-size: 13px;
+          color: #5C4E40;
+          line-height: 1.75;
+          margin-bottom: 16px;
+        }
+        .account-block {
+          background: rgba(255, 255, 255, 0.5);
+          border: 1px dashed #B89B6E;
+          border-radius: 6px;
+          padding: 14px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .account-line {
+          display: flex;
+          align-items: baseline;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+        .account-label {
+          font-size: 11px;
+          color: #8B7355;
+          letter-spacing: 2px;
+        }
+        .account-value {
+          font-family: "Songti SC", "STSong", serif;
+          font-size: 18px;
+          color: #3F4A3C;
+          font-weight: 600;
+          letter-spacing: 1px;
+        }
+        .account-id {
+          font-family: "SF Mono", "Menlo", monospace;
+          font-size: 13px;
+          color: #6B6258;
+          background: rgba(255,255,255,0.6);
+          padding: 2px 8px;
+          border-radius: 3px;
+          letter-spacing: 1px;
+        }
+        .copy-hint {
+          font-size: 11px;
+          color: #8B7355;
+          margin-top: 4px;
+          font-style: italic;
+        }
+        .feedback-divider {
+          width: 30px;
+          height: 1px;
+          background: #C4B59A;
+          margin: 14px auto;
+        }
+        .feedback-footer {
+          margin-top: 14px;
+          font-size: 11px;
+          color: #8B7355;
+          text-align: center;
+          line-height: 1.6;
         }
       `}</style>
 
@@ -482,6 +594,9 @@ export default function App() {
                 placeholder="比如：周漾"
                 style={inputStyle}
               />
+              <div style={{ fontSize: 12, color: C.warm, marginTop: 4, lineHeight: 1.5 }}>
+                必须跟源文本里出现的名字一字不差（比如填 "周漾"，不是 "vines" 或 "Zhou Yang"），不一致工具识别不出来
+              </div>
             </Field>
           </div>
 
@@ -617,7 +732,7 @@ export default function App() {
                 </div>
                 {preview.skipped > 0 && <div>忽略了 {preview.skipped} 行无效内容</div>}
                 <div>
-                  起始时间：<span style={{ color: C.ink }}>{formatCreateDate(preview.startDate)}</span>
+                  起始时间：<span style={{ color: C.ink }}>{formatDisplayDate(preview.startDate)}</span>
                 </div>
                 <div style={{ color: C.warm, fontSize: 11 }}>↳ {preview.source}</div>
               </div>
@@ -686,18 +801,30 @@ export default function App() {
           )}
         </div>
 
-        <div
-          style={{
-            marginTop: 24,
-            fontSize: 11,
-            color: C.inkMuted,
-            textAlign: 'center',
-            lineHeight: 1.8,
-          }}
-        >
-          所有处理在你的设备本地完成 · 不会上传任何数据
-          <br />
-          有问题反馈到小红书 @江栩栩（小红书号 6385292153）笔记评论区或群聊
+        {/* 底部反馈卡片 */}
+        <div className="feedback-card">
+          <div className="feedback-title">
+            <span className="feedback-icon">!</span>
+            <span>卡住了？告诉我</span>
+          </div>
+          <div className="feedback-text">
+            工具出错、ST 导入失败、想加新功能、想吐槽——都欢迎来找我。我会定期把大家的反馈打包处理。
+          </div>
+
+          <div className="account-block">
+            <div className="account-line">
+              <span className="account-label">小红书</span>
+              <span className="account-value">@江栩栩</span>
+            </div>
+            <div className="account-line">
+              <span className="account-label">小红书号</span>
+              <span className="account-id">6385292153</span>
+            </div>
+            <div className="copy-hint">在原教程笔记的评论区或者群聊里留言，看到都会回</div>
+          </div>
+
+          <div className="feedback-divider" />
+          <div className="feedback-footer">本地处理 · 不上传任何数据 · 完全免费</div>
         </div>
       </div>
     </div>
