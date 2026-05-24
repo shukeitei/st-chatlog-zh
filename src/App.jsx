@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 // ============ 配色与字体 ============
 const C = {
@@ -113,6 +113,11 @@ function formatSendDate(d) {
 
 function formatCreateDate(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}@${pad(d.getHours())}h${pad(d.getMinutes())}m${pad(d.getSeconds())}s`;
+}
+
+// 导出文件名用的时间戳：用下载这一刻的时间，避免多个版本互相覆盖
+function timestampForFilename(d = new Date()) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
 }
 
 // ============ 时间识别 ============
@@ -316,6 +321,14 @@ export default function App() {
   const [customStart, setCustomStart] = useState('');
   const [preview, setPreview] = useState(null);
   const [hint, setHint] = useState('');
+  const previewRef = useRef(null);
+
+  // 解析出预览后自动滚到结果区，避免用户以为"点了没反应"而没发现折叠线下方还有内容
+  useEffect(() => {
+    if (preview && previewRef.current) {
+      previewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [preview]);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -373,7 +386,7 @@ export default function App() {
     const objects = buildMessageObjects(msgs, u, c, preview.startDate);
     const jsonl = generateJsonl(metadata, objects);
     const suffix = testOnly ? '_前3条测试' : '';
-    downloadFile(`${c}${suffix}.jsonl`, jsonl);
+    downloadFile(`${c}_${timestampForFilename()}${suffix}.jsonl`, jsonl);
   };
 
   return (
@@ -393,6 +406,10 @@ export default function App() {
         }
         button:hover { opacity: 0.9; }
         button:active { transform: translateY(1px); }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
 
       <div style={{ maxWidth: 560, margin: '0 auto' }}>
@@ -429,7 +446,7 @@ export default function App() {
             ⚠ 这是格式转换工具，不处理图片和视频
           </div>
           <div>
-            你需要先用 Google AI Studio 让 Gemini 看你的录屏，整理成{' '}
+            你需要先用 Gemini（手机 App 或 Google AI Studio 网页版都行）看你的录屏，整理成{' '}
             <code style={codeChipStyle}>USER: 内容</code> 和{' '}
             <code style={codeChipStyle}>角色名: 内容</code>{' '}
             这样一行一句的纯文本，再回来这里。详细步骤看小红书笔记。
@@ -574,10 +591,13 @@ export default function App() {
           {/* 预览 */}
           {preview && (
             <div
+              ref={previewRef}
               style={{
                 marginTop: 24,
                 paddingTop: 20,
                 borderTop: `1px dashed ${C.borderStrong}`,
+                animation: 'fadeInUp 0.4s ease',
+                scrollMarginTop: 16,
               }}
             >
               <Section title="三 · 预览" />
