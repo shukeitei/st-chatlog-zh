@@ -579,7 +579,7 @@ export default function App() {
           </div>
           {/* 副标题 */}
           <div style={{ color: C.inkMuted, fontSize: 14, letterSpacing: 1, lineHeight: 1.6 }}>
-            星野 / 猫箱 聊天记录 → SillyTavern
+            星野 / 猫箱 聊天记录 → SillyTavern / Tavo
           </div>
           {/* 底部细线 */}
           <div style={{ height: 1, background: C.borderStrong, opacity: 0.55, marginTop: 22 }} />
@@ -841,7 +841,7 @@ export default function App() {
             <span>卡住了？告诉我</span>
           </div>
           <div className="feedback-text">
-            工具出错、ST 导入失败、想加新功能、想吐槽——都欢迎来找我。我会定期把大家的反馈打包处理。
+            工具出错、ST 或 Tavo 导入失败、想加新功能、想吐槽——都欢迎来找我。我会定期把大家的反馈打包处理。
           </div>
 
           <div className="account-block">
