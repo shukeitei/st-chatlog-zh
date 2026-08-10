@@ -138,7 +138,9 @@ function chatIdHash() {
 }
 
 function downloadFile(filename, content) {
-  const blob = new Blob([content], { type: 'application/x-ndjson' });
+  // 必须用 octet-stream：标 application/x-ndjson 会让浏览器按 MIME 补后缀，
+  // 下载下来变成 .ndjsonl，ST 导入识别不到
+  const blob = new Blob([content], { type: 'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
